@@ -1,0 +1,3 @@
+# SuperPetGame-RST
+A window pet game include three characters, turtle, rabbit and snake.
+Finish some game UI design use bevy engine.
