@@ -2,9 +2,9 @@
 use bevy::prelude::*;
 use bevy::window::{Window, WindowPlugin, WindowResolution};
 
-mod splash;
 mod game;
 mod menu;
+mod splash;
 //mod client;
 
 const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
@@ -18,7 +18,6 @@ enum GameState {
     MintPet,
     Game,
 }
-
 
 fn main() {
     App::new()
@@ -36,7 +35,7 @@ fn main() {
                 ..default()
             }),
             ..default()
-        }))      
+        }))
         .add_startup_system(setup)
         // Declare the game state, whose starting value is determined by the `Default` trait
         .add_state::<GameState>()
@@ -58,15 +57,15 @@ fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands
         commands.entity(entity).despawn_recursive();
     }
 }
-    /* 
-    // Tick the timer, and change state when finished
-    fn game(
-        time: Res<Time>,
-        mut game_state: ResMut<NextState<GameState>>,
-        mut timer: ResMut<GameTimer>,
-    ) {
-        if timer.tick(time.delta()).finished() {
-            game_state.set(GameState::Menu);
-        }
+/*
+// Tick the timer, and change state when finished
+fn game(
+    time: Res<Time>,
+    mut game_state: ResMut<NextState<GameState>>,
+    mut timer: ResMut<GameTimer>,
+) {
+    if timer.tick(time.delta()).finished() {
+        game_state.set(GameState::Menu);
     }
-    */
+}
+*/
