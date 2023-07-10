@@ -15,8 +15,15 @@ enum GameState {
     #[default]
     Splash,
     Menu,
-    MintPet,
     Game,
+}
+
+// Enum that will be used as a global state for the game
+#[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
+enum PetOwned {
+    #[default]
+    Disable,
+    Enable,
 }
 
 fn main() {
@@ -39,6 +46,7 @@ fn main() {
         .add_startup_system(setup)
         // Declare the game state, whose starting value is determined by the `Default` trait
         .add_state::<GameState>()
+        .add_state::<PetOwned>()
         // Adds the plugins for each state
         .add_plugin(splash::SplashPlugin)
         .add_plugin(menu::MenuPlugin)

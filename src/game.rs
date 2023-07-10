@@ -20,6 +20,7 @@ impl Plugin for GamePlugin {
         app.add_state::<PlayMenuState>()
             .add_systems((
                 game_setup.in_schedule(OnEnter(GameState::Game)),
+                //.run_if(in_state(PetOwned::Enable)),
                 despawn_screen::<OnGameScreen>.in_schedule(OnExit(GameState::Game)),
             ))
             .add_systems((

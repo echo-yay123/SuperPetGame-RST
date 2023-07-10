@@ -7,7 +7,7 @@ use sp_keyring::sr25519::sr25519::Pair;
 use sp_keyring::AccountKeyring;
 use subxt::utils::AccountId32;
 use subxt::{tx::PairSigner, tx::TxStatus, OnlineClient, PolkadotConfig};
-use thiserror::Error as ThisError;
+//use thiserror::Error as ThisError;
 
 // This plugin manages the menu, with 5 different screens:
 // - a main menu with "New Game", "Settings", "Quit"
@@ -37,6 +37,26 @@ impl Plugin for MenuPlugin {
                 transaction_setup.in_schedule(OnEnter(MenuState::Transaction)),
                 despawn_screen::<OnTransactionScreen>.in_schedule(OnExit(MenuState::Transaction)),
             ))
+            .insert_resource(Id{
+                user_id: "".to_string(), 
+                buyer_id: "".to_string(), 
+                pet_id: 1, 
+                pet_name: "".to_string(),
+                pet_species: "".to_string(),
+            
+            })
+            .add_state::<TextBundleActivated>()
+            .add_systems((menu_action,button_system))
+            .add_systems(
+           
+                (
+                 listen_received_character_events_user_id_input.run_if(in_state(TextBundleActivated::UserId)),
+                 listen_received_character_events_buyer_id_input.run_if(in_state(TextBundleActivated::BuyerId)),
+                 listen_received_character_events_pet_id_input.run_if(in_state(TextBundleActivated::PetId)),
+                 listen_received_character_events_pet_name_input.run_if(in_state(TextBundleActivated::PetName)),
+                 listen_received_character_events_pet_species_input.run_if(in_state(TextBundleActivated::PetSpecies)),
+                )
+            )
             // Common systems to all screens that handles buttons behaviour
             .add_systems((menu_action, button_system).in_set(OnUpdate(GameState::Menu)));
     }
@@ -81,35 +101,6 @@ const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.25, 0.65, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
-// Tag component used to mark which setting is currently selected
-#[derive(Component)]
-struct OnPlayerIdInputText;
-
-#[derive(Component)]
-struct OnPetNameInputText;
-
-#[derive(Component)]
-struct OnPetIdInputText;
-
-#[derive(Component)]
-struct OnPetSpeciesInputText;
-
-#[derive(Component)]
-struct SelectedOption;
-
-// All actions that can be triggered from a button click
-#[derive(Component)]
-enum MenuButtonAction {
-    NewGame,      //Create a new Game
-    ContinueGame, //Continue the Game
-    //Settings,//Game settings
-    MintPet(String, String),
-    //Update, //Pet state update
-    Transaction, //Buy or Sell pet
-    BackToMainMenu,
-    Quit,
-}
-
 // This system handles changing all buttons color based on mouse interaction
 fn button_system(
     mut interaction_query: Query<
@@ -126,6 +117,37 @@ fn button_system(
         }
     }
 }
+
+
+
+#[derive(Component)]
+struct SelectedOption;
+
+// All actions that can be triggered from a button click
+#[derive(Component)]
+enum MenuButtonAction {
+    //Buttons in main menu
+    NewGame,      
+    ContinueGame,
+    Update, 
+    Transaction, 
+    BackToMainMenu,
+    Quit,
+
+    //Buttons in new game menu
+    //Settings,//Game settings
+    UserId,
+    PetSpecies,
+    PetId,
+    PetName,
+    MintPet,
+
+    //Buttons in transcation menu
+    TransferSubmit,
+    BuyerId,
+}
+
+
 
 // This system updates the settings when a new value for a setting is selected, and marks
 // the button as the one currently selected
@@ -314,6 +336,42 @@ fn main_menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 });
         });
 }
+
+// Tag component used to mark which text is currently selected
+#[derive(Component)]
+struct OnUserIdInputText;
+#[derive(Component)]
+struct OnBuyerIdInputText;
+
+#[derive(Component)]
+struct OnPetNameInputText;
+
+#[derive(Component)]
+struct OnPetIdInputText;
+
+#[derive(Component)]
+struct OnPetSpeciesInputText;
+
+#[derive(Resource, Debug,Clone)]
+struct Id {
+    user_id : String,
+    buyer_id : String,    
+    pet_id : u32,
+    pet_species: String,
+    pet_name: String,
+}
+
+#[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
+enum TextBundleActivated{
+    #[default]
+    None,
+    UserId,
+    PetSpecies,
+    PetName,
+    PetId,
+    BuyerId,
+}
+
 //New game menu setup, enter a webpage to mint a pet if the user don't have one.
 fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let button_style = Style {
@@ -337,16 +395,6 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             width: Val::Px(15.0),
             height: Val::Px(15.0),
         },
-        ..default()
-    };
-
-    let text_node_bundle_style = Style {
-        size: Size {
-            width: Val::Px(200.),
-            height: Val::Px(50.),
-        },
-        align_items: AlignItems::Center,
-        align_content: AlignContent::Center,
         ..default()
     };
 
@@ -378,30 +426,29 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 })
                 .with_children(|parent| {
                     parent.spawn(TextBundle {
-                        text: Text::from_section("Player Id   ".to_string(), text_style.clone()),
+                        text: Text::from_section("User Id     ".to_string(), text_style.clone()),
                         ..default()
                     });
 
                     parent
-                        .spawn(
-                            NodeBundle {
-                                style: text_node_bundle_style.clone(),
-                                background_color: Color::DARK_GRAY.into(),
-
+                        .spawn((
+                            ButtonBundle {
+                                style: button_style.clone(),
+                                background_color: NORMAL_BUTTON.into(),
                                 ..default()
                             },
-                            //OnIdInputText,
-                        )
+                            MenuButtonAction::UserId,
+                        ))
                         .with_children(|parent| {
                             parent.spawn((
                                 TextBundle {
                                     text: Text::from_section(
-                                        "Alice".to_string(),
+                                        "".to_string(),
                                         text_style.clone(),
                                     ),
                                     ..default()
                                 },
-                                OnPlayerIdInputText,
+                                OnUserIdInputText,
                             ));
                         });
                 });
@@ -419,17 +466,19 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     });
 
                     parent
-                        .spawn(NodeBundle {
-                            style: text_node_bundle_style.clone(),
-                            background_color: Color::DARK_GRAY.into(),
-
-                            ..default()
-                        })
+                        .spawn((
+                            ButtonBundle {
+                                style: button_style.clone(),
+                                background_color: NORMAL_BUTTON.into(),
+                                ..default()
+                            },
+                            MenuButtonAction::PetSpecies,
+                        ))
                         .with_children(|parent| {
                             parent.spawn((
                                 TextBundle {
                                     text: Text::from_section(
-                                        "Turtle".to_string(),
+                                        "".to_string(),
                                         text_style.clone(),
                                     ),
                                     ..default()
@@ -445,21 +494,24 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ..default()
                 })
                 .with_children(|parent| {
-                    parent.spawn(TextBundle {
+                    parent.spawn(
+                        TextBundle {
                         text: Text::from_section("Pet Id      ".to_string(), text_style.clone()),
                         ..default()
                     });
-
                     parent
-                        .spawn(NodeBundle {
-                            style: text_node_bundle_style.clone(),
-                            background_color: Color::DARK_GRAY.into(),
-                            ..default()
-                        })
+                        .spawn((
+                            ButtonBundle {
+                                style: button_style.clone(),
+                                background_color: NORMAL_BUTTON.into(),
+                                ..default()
+                            },
+                            MenuButtonAction::PetId,
+                        ))
                         .with_children(|parent| {
                             parent.spawn((
                                 TextBundle {
-                                    text: Text::from_section("1".to_string(), text_style.clone()),
+                                    text: Text::from_section("".to_string(), text_style.clone()),
                                     ..default()
                                 },
                                 OnPetIdInputText,
@@ -480,16 +532,19 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     });
 
                     parent
-                        .spawn(NodeBundle {
-                            style: text_node_bundle_style.clone(),
-                            background_color: Color::DARK_GRAY.into(),
-                            ..default()
-                        })
+                        .spawn((
+                            ButtonBundle {
+                                style: button_style.clone(),
+                                background_color: NORMAL_BUTTON.into(),
+                                ..default()
+                            },
+                            MenuButtonAction::PetName,
+                        ))
                         .with_children(|parent| {
                             parent.spawn((
                                 TextBundle {
                                     text: Text::from_section(
-                                        "Annatle".to_string(),
+                                        "".to_string(),
                                         text_style.clone(),
                                     ),
                                     ..default()
@@ -506,7 +561,7 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                         background_color: Color::DARK_GRAY.into(),
                         ..default()
                     },
-                    MenuButtonAction::MintPet("test-name".to_string(), "test-species".to_string()),
+                    MenuButtonAction::MintPet,
                 ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle {
@@ -543,7 +598,7 @@ fn transaction_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let text_style = TextStyle {
         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
         font_size: 24.0,
-        color: TEXT_COLOR,
+        color: Color::WHITE.into(),
     };
 
     let node_style = Style {
@@ -554,16 +609,6 @@ fn transaction_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             width: Val::Px(15.0),
             height: Val::Px(15.0),
         },
-        ..default()
-    };
-
-    let text_node_bundle_style = Style {
-        size: Size {
-            width: Val::Px(200.),
-            height: Val::Px(50.),
-        },
-        align_items: AlignItems::Center,
-        align_content: AlignContent::Center,
         ..default()
     };
 
@@ -600,25 +645,24 @@ fn transaction_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     });
 
                     parent
-                        .spawn(
-                            NodeBundle {
-                                style: text_node_bundle_style.clone(),
-                                background_color: Color::DARK_GRAY.into(),
-
+                        .spawn((
+                            ButtonBundle {
+                                style: button_style.clone(),
+                                background_color: NORMAL_BUTTON.into(),
                                 ..default()
                             },
-                            //OnIdInputText,
-                        )
+                            MenuButtonAction::UserId,
+                        ))
                         .with_children(|parent| {
                             parent.spawn((
                                 TextBundle {
                                     text: Text::from_section(
-                                        "Alice".to_string(),
+                                        "".to_string(),
                                         text_style.clone(),
                                     ),
                                     ..default()
                                 },
-                                OnPlayerIdInputText,
+                                OnUserIdInputText,
                             ));
                         });
                 });
@@ -631,27 +675,30 @@ fn transaction_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 })
                 .with_children(|parent| {
                     parent.spawn(TextBundle {
-                        text: Text::from_section("Receiver Id ".to_string(), text_style.clone()),
+                        text: Text::from_section("Buyer Id ".to_string(), text_style.clone()),
                         ..default()
                     });
 
                     parent
-                        .spawn(NodeBundle {
-                            style: text_node_bundle_style.clone(),
-                            background_color: Color::DARK_GRAY.into(),
-
-                            ..default()
-                        })
+                        .spawn((
+                            ButtonBundle {
+                                style: button_style.clone(),
+                                background_color: NORMAL_BUTTON.into(),
+                                ..default()
+                            },
+                            MenuButtonAction::BuyerId,
+                        ))
                         .with_children(|parent| {
                             parent.spawn((
                                 TextBundle {
-                                    text: Text::from_section("Bob".to_string(), text_style.clone()),
+                                    text: Text::from_section("".to_string(), text_style.clone()),
                                     ..default()
                                 },
-                                OnPetSpeciesInputText,
+                                OnBuyerIdInputText,
                             ));
                         });
                 });
+            /*     
             parent
                 .spawn(NodeBundle {
                     style: node_style.clone(),
@@ -665,28 +712,34 @@ fn transaction_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     });
 
                     parent
-                        .spawn(NodeBundle {
-                            style: text_node_bundle_style.clone(),
-                            background_color: Color::DARK_GRAY.into(),
-                            ..default()
-                        })
+                        .spawn((
+                            ButtonBundle {
+                                style: button_style.clone(),
+                                background_color: NORMAL_BUTTON.into(),
+                                ..default()
+                            },
+                            MenuButtonAction::PetId,
+                        ))
                         .with_children(|parent| {
                             parent.spawn((
                                 TextBundle {
-                                    text: Text::from_section("1".to_string(), text_style.clone()),
+                                    text: Text::from_section("".to_string(), text_style.clone()),
                                     ..default()
                                 },
                                 OnPetIdInputText,
                             ));
                         });
                 });
-
+            */
             parent
-                .spawn(ButtonBundle {
+                .spawn((
+                    ButtonBundle {
                     style: button_style.clone(),
                     background_color: Color::DARK_GRAY.into(),
                     ..default()
-                })
+                    },
+                    MenuButtonAction::TransferSubmit,
+                ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle {
                         text: Text::from_section("Submit".to_string(), text_style.clone()),
@@ -719,6 +772,9 @@ fn menu_action(
     mut app_exit_events: EventWriter<AppExit>,
     mut menu_state: ResMut<NextState<MenuState>>,
     mut game_state: ResMut<NextState<GameState>>,
+   // mut pet_owned: ResMut<NextState<PetOwned>>,
+    mut text_bundle_activated_state: ResMut<NextState<TextBundleActivated>>,
+    id :ResMut<Id>,
 ) {
     for (interaction, menu_button_action) in &interaction_query {
         if *interaction == Interaction::Clicked {
@@ -726,25 +782,70 @@ fn menu_action(
                 MenuButtonAction::Quit => app_exit_events.send(AppExit),
                 //Enter new game menu
                 MenuButtonAction::NewGame => menu_state.set(MenuState::NewGame),
-
+                //Continue Play
                 MenuButtonAction::ContinueGame => {
                     game_state.set(GameState::Game);
                     menu_state.set(MenuState::Disabled);
                 }
-
                 //MenuButtonAction::Settings => menu_state.set(MenuState::Settings),
                 //MenuButtonAction::Update => menu_state.set(MenuState::Update),
                 MenuButtonAction::Transaction => menu_state.set(MenuState::Transaction),
                 //Return to Main menu
                 MenuButtonAction::BackToMainMenu => menu_state.set(MenuState::Main),
+                
+                //Actions on new game menu
+                MenuButtonAction::UserId => text_bundle_activated_state.set(TextBundleActivated::UserId),
+                MenuButtonAction::PetSpecies => text_bundle_activated_state.set(TextBundleActivated::PetSpecies),
+                MenuButtonAction::PetId => text_bundle_activated_state.set(TextBundleActivated::PetId),
+                MenuButtonAction::PetName => text_bundle_activated_state.set(TextBundleActivated::PetName),  
+
+                //Actions on transaction menu
+               // MenuButtonAction::UserId => text_bundle_activated_state.set(TextBundleActivated::UserId),
+                MenuButtonAction::BuyerId => text_bundle_activated_state.set(TextBundleActivated::BuyerId),
+               // MenuButtonAction::PetId => text_bundle_activated_state.set(TextBundleActivated::PetId), 
+
+
                 //Submit mint_pet information
-                MenuButtonAction::MintPet(name, species) => {
-                    println!("mint pet, {}, {}", name, species);
-                    let result = tokio::runtime::Runtime::new().unwrap().block_on(mint(1, PetSpecies::Rabbit, name.clone()));
+                MenuButtonAction::MintPet => {
+                    let (userid,petid,petname)= (id.user_id.clone(),id.pet_id,id.pet_name.clone());
+                    let petspecies = match id.pet_species.as_str() 
+                    {
+                        "Turtle" => PetSpecies::Turtle,
+                        "Rabbit" => PetSpecies::Rabbit,
+                        "Snake" => PetSpecies::Snake,
+                        _ => PetSpecies::Turtle,
+                    };
+                    println!("Start mint: {userid:?},{petspecies:?},{petid:?},{petname:?}");
+                    
+                    let result = tokio::runtime::Runtime::new()
+                        .unwrap()
+                        .block_on(mint(userid,petspecies,petid,petname));
+
                     match result {
                         Ok(_) => {
-                            println!("minted pet");
-                            game_state.set(GameState::MintPet)
+                            game_state.set(GameState::Game);
+                            menu_state.set(MenuState::Disabled);
+                            
+                        },
+                        Err(e) => {
+                            println!("error minting pet: {:?}", e);
+                            menu_state.set(MenuState::Main)
+                        },
+                    }
+                },
+                MenuButtonAction::TransferSubmit => {
+                    let (userid,buyerid)= (id.user_id.clone(),id.buyer_id.clone());
+                    
+                    println!("Start transfer: {userid:?},{buyerid:?}");
+                    
+                    let result = tokio::runtime::Runtime::new()
+                        .unwrap()
+                        .block_on(transfer(userid,buyerid));
+
+                    match result {
+                        Ok(_) => {
+                            println!("Yep! Pet Saled!")
+                            
                         },
                         Err(e) => {
                             println!("error minting pet: {:?}", e);
@@ -753,21 +854,25 @@ fn menu_action(
                     }
                 },
 
+
                 _ => menu_state.set(MenuState::Main),
             }
         }
     }
 }
 
-fn listen_received_character_events_player_id_input(
+
+fn listen_received_character_events_user_id_input(
     mut events: EventReader<ReceivedCharacter>,
     kbd: Res<Input<KeyCode>>,
-    mut edit_text: Query<&mut Text, With<OnPlayerIdInputText>>,
+    mut edit_text: Query<&mut Text, With<OnUserIdInputText>>,
+    mut id : ResMut<Id>,
 ) {
     for event in events.iter() {
         if kbd.just_pressed(KeyCode::Return) {
-            let userid = &edit_text.single_mut().sections[0].value;
-            println!("{userid:?}");
+            let content = &edit_text.single_mut().sections[0].value;
+            id.user_id = content.to_string();
+            //println!("user_id : {id:?}");
         } else if kbd.just_pressed(KeyCode::Back) {
             edit_text.single_mut().sections[0].value.pop();
         } else {
@@ -776,30 +881,117 @@ fn listen_received_character_events_player_id_input(
     }
 }
 
+fn listen_received_character_events_buyer_id_input(
+    mut events: EventReader<ReceivedCharacter>,
+    kbd: Res<Input<KeyCode>>,
+    mut edit_text: Query<&mut Text, With<OnBuyerIdInputText>>,
+    mut id :ResMut<Id>,
+) {
+    for event in events.iter() {
+        if kbd.just_pressed(KeyCode::Return) {
+            let content = &edit_text.single_mut().sections[0].value;
+            id.buyer_id = content.to_string();
+            //println!("buyer_id: {id:?}");
+        } else if kbd.just_pressed(KeyCode::Back) {
+            edit_text.single_mut().sections[0].value.pop();
+        } else {
+            edit_text.single_mut().sections[0].value.push(event.char);
+        }
+    }
+}
+
+fn listen_received_character_events_pet_id_input(
+    mut events: EventReader<ReceivedCharacter>,
+    kbd: Res<Input<KeyCode>>,
+    mut edit_text: Query<&mut Text, With<OnPetIdInputText>>,
+    mut id : ResMut<Id>,
+) {
+    for event in events.iter() {
+        if kbd.just_pressed(KeyCode::Return) {
+            let content = &edit_text.single_mut().sections[0].value;
+            id.pet_id = content.parse().unwrap();
+            //println!("{id:?}");
+        } else if kbd.just_pressed(KeyCode::Back) {
+            edit_text.single_mut().sections[0].value.pop();
+        } else {
+            edit_text.single_mut().sections[0].value.push(event.char);
+        }
+    }
+}
+fn listen_received_character_events_pet_species_input(
+    mut events: EventReader<ReceivedCharacter>,
+    kbd: Res<Input<KeyCode>>,
+    mut edit_text: Query<&mut Text, With<OnPetSpeciesInputText>>,
+    mut id : ResMut<Id>,
+) {
+    for event in events.iter() {
+        if kbd.just_pressed(KeyCode::Return) {
+            let content = &edit_text.single_mut().sections[0].value;
+            id.pet_species = content.to_string();
+            //println!("{id:?}");
+        } else if kbd.just_pressed(KeyCode::Back) {
+            edit_text.single_mut().sections[0].value.pop();
+        } else {
+            edit_text.single_mut().sections[0].value.push(event.char);
+        }
+    }
+}
+fn listen_received_character_events_pet_name_input(
+    mut events: EventReader<ReceivedCharacter>,
+    kbd: Res<Input<KeyCode>>,
+    mut edit_text: Query<&mut Text, With<OnPetNameInputText>>,
+    mut id : ResMut<Id>,
+) {
+    for event in events.iter() {
+        if kbd.just_pressed(KeyCode::Return) {
+            let content = &edit_text.single_mut().sections[0].value;
+            id.pet_name = content.to_string();
+            //println!("{id:?}");
+        } else if kbd.just_pressed(KeyCode::Back) {
+            edit_text.single_mut().sections[0].value.pop();
+        } else {
+            edit_text.single_mut().sections[0].value.push(event.char);
+        }
+    }
+}
+
+
 #[subxt::subxt(runtime_metadata_path = "./metadata.scale")]
+//#[subxt::subxt(runtime_metadata_path = "/mnt/hddisk1/github/SuperPetGame-RST/metadata.scale")]
 pub mod polkadot {}
 type PetId = u32;
 type PetSpecies = polkadot::runtime_types::pallet_pet::pallet::Species;
-type PetInfo = polkadot::runtime_types::pallet_pet::pallet::PetInfo;
-type Error = polkadot::runtime_types::pallet_pet::pallet::Error;
-type PetName = polkadot::runtime_types::bounded_collections::bounded_vec::BoundedVec<u8>;
+//type PetInfo = polkadot::runtime_types::pallet_pet::pallet::PetInfo;
+//type Error = polkadot::runtime_types::pallet_pet::pallet::Error;
+//type PetName = polkadot::runtime_types::bounded_collections::bounded_vec::BoundedVec<u8>;
+
+#[derive(Debug)]
+pub struct PetError;
+
 
 async fn mint(
-    petid: PetId,
+    userid: String,
     species: PetSpecies,
+    petid: PetId,
     name: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("start to mint!");
+    //println!("start to mint!");
 
     let api = OnlineClient::<PolkadotConfig>::new().await?;
 
     //Some pet information, include petname, species, petid
-    let petid: PetId = 1;
-    let species = polkadot::runtime_types::pallet_pet::pallet::Species::Turtle;
+    //let petid: PetId = 1;
+    //let species = polkadot::runtime_types::pallet_pet::pallet::Species::Turtle;
     let petname = polkadot::runtime_types::bounded_collections::bounded_vec::BoundedVec(name.into_bytes());
 
     //Mint a pet for account Alice.
-    let from = PairSigner::new(AccountKeyring::Alice.pair());
+    let from : PairSigner<PolkadotConfig,Pair> = match userid.as_str(){
+        "Alice" => PairSigner::new(AccountKeyring::Alice.pair()),
+        "Bob" => PairSigner::new(AccountKeyring::Bob.pair()),
+        "Charlie" => PairSigner::new(AccountKeyring::Charlie.pair()),
+        "Dave" => PairSigner::new(AccountKeyring::Dave.pair()),
+        _ => PairSigner::new(AccountKeyring::Eve.pair()),
+    };
 
     // Build a pet mint extrinsic.
     let balance_transfer_tx = polkadot::tx().pet_module().mint(petname, species, petid);
@@ -817,11 +1009,7 @@ async fn mint(
         match status? {
             // It's finalized in a block!
             TxStatus::Finalized(in_block) => {
-                println!(
-                    "Transaction is finalized in block ",
-                    //in_block.extrinsic_hash(),
-                    //in_block.block_hash()
-                );
+                //println!("Transaction is finalized in block ");
 
                 // grab the events and fail if no ExtrinsicSuccess event seen:
                 let events = in_block.fetch_events().await?;
@@ -831,8 +1019,6 @@ async fn mint(
                 //over them and dynamically decode them):
                 let transfer_event =
                     events.find_first::<polkadot::pet_module::events::PetMinted>()?;
-                let error_event =
-                    events.find_first::<polkadot::system::events::ExtrinsicFailed>()?;
 
                 if let Some(_event) = transfer_event {
                     println!("Yeah! You have your own pet!");
@@ -848,6 +1034,72 @@ async fn mint(
             }
         }
     }
+
+    Ok(())
+}
+
+async fn transfer(
+    sender: String,
+    buyer: String,    
+    //from:&PairSigner<PolkadotConfig,Pair>,
+    //receiver:AccountId32,
+    //petid:PetId
+) -> Result<(), Box<dyn std::error::Error>> {
+    
+    //Build a pet transfer extrinsic.
+    let api = OnlineClient::<PolkadotConfig>::new().await?;
+    
+    let from : PairSigner<PolkadotConfig,Pair> = match sender.as_str(){
+        "Alice" => PairSigner::new(AccountKeyring::Alice.pair()),
+        "Bob" => PairSigner::new(AccountKeyring::Bob.pair()),
+        "Charlie" => PairSigner::new(AccountKeyring::Charlie.pair()),
+        "Dave" => PairSigner::new(AccountKeyring::Dave.pair()),
+        _ => PairSigner::new(AccountKeyring::Eve.pair()),
+    };
+    let receiver: AccountId32 = match buyer.as_str() {
+        "Alice" => AccountKeyring::Bob.to_account_id().into(),
+        "Bob" => AccountKeyring::Bob.to_account_id().into(),
+        "Charlie" => AccountKeyring::Charlie.to_account_id().into(),
+        "Dave" => AccountKeyring::Dave.to_account_id().into(),
+        _ => AccountKeyring::Eve.to_account_id().into(),
+    };
+    
+    //let receiver: AccountId32 = AccountKeyring::Bob.to_account_id().into();
+    //let from = PairSigner::new(AccountKeyring::Alice.pair());
+    
+    let pet_transfer_tx = polkadot::tx().pet_module().transfer(receiver);
+
+    let mut transfer_pet = api
+        .tx()
+        .sign_and_submit_then_watch_default(&pet_transfer_tx, &from)
+        .await?;
+    
+    while let Some(status) = transfer_pet.next().await {
+            match status? {
+                // It's finalized in a block!
+                TxStatus::Finalized(in_block) => {
+                    println!("Transaction is finalized in block ");
+                    
+                    // grab the events and fail if no ExtrinsicSuccess event seen:
+                    let events = in_block.fetch_events().await?;
+                    // We can look for events (this uses the static interface; we can also iterate
+                    //over them and dynamically decode them):
+                    let transfer_event = events.find_first::<polkadot::pet_module::events::PetTransfered>()?;
+                    //let transfer_event = events.find_first::<ExtrinsicFailed>()?;
+                    if let Some(_) = transfer_event {
+                        println!("Pet saled!");
+                    } else {
+                        println!("Error::SomethingWrong");
+                    }
+                }
+                TxStatus::Ready => {}
+                TxStatus::InBlock(_) => {}
+                // Just log any other status we encounter:
+                other => {
+                    println!("Status: {other:?}");
+                }
+            }
+        }
 
     Ok(())
 }
