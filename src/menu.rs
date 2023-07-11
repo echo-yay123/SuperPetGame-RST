@@ -46,7 +46,6 @@ impl Plugin for MenuPlugin {
             
             })
             .add_state::<TextBundleActivated>()
-            .add_systems((menu_action,button_system))
             .add_systems(
            
                 (
@@ -404,12 +403,13 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 style: Style {
                     size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                     flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
+                    align_items: AlignItems::Start,
                     justify_content: JustifyContent::Center,
                     gap: Size {
                         width: Val::Px(15.0),
                         height: Val::Px(15.0),
                     },
+                    padding: UiRect::left(Val::Percent(36.0)),
                     ..default()
                 },
                 background_color: Color::DARK_GREEN.into(),
@@ -420,13 +420,19 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .with_children(|parent| {
             parent
                 .spawn(NodeBundle {
-                    style: node_style.clone(),
+                    style: Style {
+                        ..node_style.clone()
+                    },
                     background_color: Color::NONE.into(),
                     ..default()
                 })
                 .with_children(|parent| {
                     parent.spawn(TextBundle {
-                        text: Text::from_section("User Id     ".to_string(), text_style.clone()),
+                        text: Text::from_section("User Id".to_string(), text_style.clone()),
+                        style: Style {
+                            size: Size::new(Val::Px(120.0), Val::Px(50.0)),
+                            ..default()
+                        },
                         ..default()
                     });
 
@@ -461,7 +467,11 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 })
                 .with_children(|parent| {
                     parent.spawn(TextBundle {
-                        text: Text::from_section("Pet Species ".to_string(), text_style.clone()),
+                        text: Text::from_section("Pet Species".to_string(), text_style.clone()),
+                        style: Style {
+                            size: Size::new(Val::Px(120.0), Val::Px(50.0)),
+                            ..default()
+                        },
                         ..default()
                     });
 
@@ -496,7 +506,11 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .with_children(|parent| {
                     parent.spawn(
                         TextBundle {
-                        text: Text::from_section("Pet Id      ".to_string(), text_style.clone()),
+                        text: Text::from_section("Pet Id".to_string(), text_style.clone()),
+                        style: Style {
+                            size: Size::new(Val::Px(120.0), Val::Px(50.0)),
+                            ..default()
+                        },
                         ..default()
                     });
                     parent
@@ -527,7 +541,11 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 })
                 .with_children(|parent| {
                     parent.spawn(TextBundle {
-                        text: Text::from_section("Pet Name    ".to_string(), text_style.clone()),
+                        text: Text::from_section("Pet Name".to_string(), text_style.clone()),
+                        style: Style {
+                            size: Size::new(Val::Px(120.0), Val::Px(50.0)),
+                            ..default()
+                        },
                         ..default()
                     });
 
@@ -557,7 +575,14 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             parent
                 .spawn((
                     ButtonBundle {
-                        style: button_style.clone(),
+                        style: Style {
+                            margin: UiRect {
+                                left: Val::Px(60.0),
+                                top: Val::Px(20.0),
+                                ..Default::default()
+                            },
+                            ..button_style.clone()
+                        },
                         background_color: Color::DARK_GRAY.into(),
                         ..default()
                     },
@@ -572,7 +597,10 @@ fn new_game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             parent
                 .spawn((
                     ButtonBundle {
-                        style: button_style.clone(),
+                        style: Style {
+                            margin: UiRect::left(Val::Px(60.0)),
+                            ..button_style.clone()
+                        },
                         background_color: Color::DARK_GRAY.into(),
                         ..default()
                     },
@@ -640,7 +668,11 @@ fn transaction_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 })
                 .with_children(|parent| {
                     parent.spawn(TextBundle {
-                        text: Text::from_section("Sender Id   ".to_string(), text_style.clone()),
+                        text: Text::from_section("Sender Id".to_string(), text_style.clone()),
+                        style: Style {
+                            size: Size::new(Val::Px(120.0), Val::Px(50.0)),
+                            ..default()
+                        },
                         ..default()
                     });
 
@@ -675,7 +707,11 @@ fn transaction_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 })
                 .with_children(|parent| {
                     parent.spawn(TextBundle {
-                        text: Text::from_section("Buyer Id ".to_string(), text_style.clone()),
+                        text: Text::from_section("Buyer Id".to_string(), text_style.clone()),
+                        style: Style {
+                            size: Size::new(Val::Px(120.0), Val::Px(50.0)),
+                            ..default()
+                        },
                         ..default()
                     });
 
@@ -734,9 +770,15 @@ fn transaction_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             parent
                 .spawn((
                     ButtonBundle {
-                    style: button_style.clone(),
-                    background_color: Color::DARK_GRAY.into(),
-                    ..default()
+                        style: Style {
+                            margin: UiRect {
+                                top: Val::Px(20.0),
+                                ..Default::default()
+                            },
+                            ..button_style.clone()
+                        },
+                        background_color: Color::DARK_GRAY.into(),
+                        ..default()
                     },
                     MenuButtonAction::TransferSubmit,
                 ))
